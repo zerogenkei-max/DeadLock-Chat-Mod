@@ -1,0 +1,11 @@
+{
+  "game": "6861",
+  "steam": "26546669",
+  "checked": "2026-11-13",
+  "resources": {
+    "panorama/layout/chat.vxml_c": 113985108,
+    "panorama/layout/popups/popup_settings.vxml_c": 502397140,
+    "panorama/layout/citadel_dashboard_footer_bar.vxml_c": 406891173
+  },
+  "result": "unchanged from baseline"
+}
