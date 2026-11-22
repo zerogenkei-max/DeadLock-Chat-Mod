@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="switchboard-token" content="__SWITCHBOARD_TOKEN__">
+  <meta name="color-scheme" content="dark">
+  <title>Deadlock Chat Mod</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/model.js" defer></script><script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Deadlock Chat Mod <span class="version" id="version"></span></h1>
+    <p class="connection" role="status"><span class="dot" id="signal"></span><span id="connection-text">Connecting…</span></p>
+    <button type="button" class="button" id="quit">Quit customiser</button>
+  </header>
+
+  <main class="layout">
+    <section class="settings" aria-labelledby="presets-title">
+      <h2 class="heading" id="presets-title">Presets</h2>
+      <div class="presets" id="presets"></div>
+      <p class="hint" id="preset-note"></p>
+
+      <div class="tabs" role="tablist" aria-label="Settings">
+        <button type="button" role="tab" id="tab-style" aria-controls="panel-style" aria-selected="true">Style</button>
+        <button type="button" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" tabindex="-1">Messages</button>
+        <button type="button" role="tab" id="tab-theme" aria-controls="panel-theme" aria-selected="false" tabindex="-1">Theme</button>
+      </div>
+      <div role="tabpanel" id="panel-style" aria-labelledby="tab-style" tabindex="0"></div>
+      <div role="tabpanel" id="panel-messages" aria-labelledby="tab-messages" tabindex="0" hidden></div>
+      <div role="tabpanel" id="panel-theme" aria-labelledby="tab-theme" tabindex="0" hidden>
+        <div id="colours"></div>
+        <h3 class="subheading">Background image</h3>
+        <div class="row">
+          <span class="label">Image file<span class="hint">PNG, JPG or WebP, up to 8 MB</span></span>
+          <label class="button file-button" for="art-file">Choose image…<input type="file" id="art-file" accept="image/png,image/jpeg,image/webp"></label>
+        </div>
+        <div id="art-controls"></div>
+        <h3 class="subheading">Theme code</h3>
+        <p class="hint">Share your look, or bring it back after reinstalling.</p>
+        <label class="sr-only" for="theme-code">Theme code</label>
+        <textarea id="theme-code" rows="3" spellcheck="false" placeholder="Paste a theme code or theme file text"></textarea>
+        <div class="button-row">
+          <button type="button" class="button" id="import-code">Apply code</button>
+          <button type="button" class="button" id="copy-code">Copy current code</button>
+          <label class="button file-button" for="theme-file">Open theme file…<input id="theme-file" type="file" accept=".json,application/json"></label>
+          <button type="button" class="button" id="export-theme">Save theme file</button>
+        </div>
+      </div>
+      <div class="settings-footer"><button type="button" class="button" id="reset">Reset to Default</button></div>
+    </section>
+
+    <section class="preview" aria-labelledby="preview-title">
+      <h2 class="heading" id="preview-title">Preview</h2>
+      <div class="scene" id="scene" role="img" aria-label="Example chat drawn over a Deadlock screenshot">
+        <div class="chat" id="chat-preview"><div class="chat-lines" id="chat-lines"></div><div class="chat-input" id="chat-input">To (Allies):</div></div>
+      </div>
+      <p class="hint">Example messages over a real Deadlock screenshot. Close enough to judge size and position.</p>
+    </section>
+
+    <section class="install" aria-labelledby="install-title">
+      <h2 class="heading" id="install-title">Install</h2>
+      <p class="status-text" id="install-status" role="status">Checking…</p>
+      <p class="hint" id="save-state"></p>
+      <div class="button-row">
+        <button type="button" class="button primary" id="install">Install / update</button>
+        <button type="button" class="button" id="launch">Launch Deadlock</button>
+        <button type="button" class="button" id="download">Download ZIP</button>
+      </div>
+      <p class="hint">The ZIP is for Deadlock Mod Manager: Add mods, then Add Local Mod. Keep one copy turned on.</p>
+      <details class="folder">
+        <summary>Game folder</summary>
+        <p class="hint" id="game-folder-current"></p>
+        <label class="label" for="game-folder">Deadlock folder</label>
+        <div class="folder-row"><input id="game-folder" type="text" spellcheck="false" placeholder="…\steamapps\common\Deadlock"><button type="button" class="button" id="save-folder">Use folder</button></div>
+        <p class="hint">Paste the folder that contains game\citadel. Quotes are fine.</p>
+      </details>
+      <p class="hint"><a href="/gallery/" target="_blank" rel="noopener">Screenshots</a></p>
+    </section>
+  </main>
+
+  <dialog id="quit-dialog" aria-labelledby="quit-title">
+    <form method="dialog">
+      <h2 id="quit-title">Quit the Windows customiser?</h2>
+      <p>Changes made in game will only last until Deadlock closes. Open the customiser again to keep them.</p>
+      <div class="button-row end"><button class="button" value="cancel" autofocus>Cancel</button><button class="button" value="quit">Quit</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
