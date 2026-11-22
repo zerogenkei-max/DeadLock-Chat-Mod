@@ -1,0 +1,17 @@
+{
+  "reviewed": "2026-11-14",
+  "basis": "Actual local Deadlock Steam captures; crop, title and arrow only. Four control/settings shots retaken in 0.2.4. See ASSETS.md.",
+  "sha256": {
+    "cover-chat.png": "d8ad3b8454a95176f059226a184ba7f1df431fb33565ec81046e1e996eedf080",
+    "switchboard.jpg": "46d0cc8cade78fb6a362fbcd931fd91adf97d8ea6835623314698d82351dddde",
+    "overwatch.jpg": "31a4d578dea7994c03eb5aa0de10e0ae8faa47b8c2dbf6134020f2506ac3a762",
+    "rivals.jpg": "72bc1da428c7cea5420adbce72410948fba52ddb5e7a9b761088e7e06e7f6291",
+    "league.jpg": "e7c885cc1d19d1fe1fc4d90de89c766c2566aae21ccfd8f6d7a984ede80d9cfe",
+    "native.jpg": "c4623c3f50b058ca2ce59c62bb48edf863d8d7100bdcbbba1388e7923aeac241",
+    "hidden.jpg": "bd2a644b1f34e0a14e860a05c9163f1306f7e244d2a4033a2c435533a997a43c",
+    "timing-controls.jpg": "1db8d571651090f0b23a41333368454beb51a72a502dab8b0a1561e1874c88fa",
+    "message-controls.jpg": "920b3cfa1a14bf8967d819bab86fe3f6fad7d490516edc33741668562ddc5dc7",
+    "name-controls.jpg": "2719b02273240676fc3db2f8bb66f09c380ed160b927a13b1e51d954ec206ad5",
+    "settings-shortcut-arrow.png": "1771af12435add16ac192e520fd3fc7012cc2f3531619970e81f8789b4181382"
+  }
+}

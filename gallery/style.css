@@ -1,0 +1,45 @@
+@charset "UTF-8";
+/* Deadlock Chat Mod - screenshot page. Same palette as the customiser and the in-game panel. */
+:root {
+  --bg: #15191a; --panel: #1c2224; --raised: #232a2c; --line: #ffffff14; --line-strong: #ffffff2a;
+  --text: #e9e4d8; --muted: #9ea7a3; --brass: #c8a46a;
+  color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.45;
+  color: var(--text); background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button { font: inherit; color: inherit; }
+a { color: var(--brass); }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 12px 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar h1 { margin: 0 auto 0 0; font-size: 18px; font-weight: 600; }
+.version { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }
+main { max-width: 1400px; margin: 0 auto; padding: 16px 24px 32px; }
+.heading { margin: 8px 0; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.hint { margin: 8px 0; font-size: 13px; color: var(--muted); }
+.footnote { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); }
+.button, .filter {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 5px 12px;
+  background: var(--raised); border: 1px solid var(--line-strong); border-radius: 2px; color: var(--text);
+  text-decoration: none; cursor: pointer;
+}
+.button:hover, .filter:hover { border-color: #ffffff66; }
+.filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 16px; }
+.filter[aria-pressed="true"] { border-color: var(--brass); color: var(--brass); background: #2a2721; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px 16px; }
+.card { margin: 0; }
+.card button { display: block; width: 100%; padding: 0; background: #0d1011; border: 1px solid var(--line-strong); border-radius: 2px; cursor: zoom-in; }
+.card button:hover { border-color: var(--brass); }
+.card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; }
+.card h3 { margin: 8px 0 4px; font-size: 15px; font-weight: 600; }
+.card p { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
+.card .kind { font-size: 12px; }
+dialog { max-width: min(96vw, 1800px); max-height: 96vh; padding: 12px; color: var(--text); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 2px; }
+dialog::backdrop { background: #000000d9; }
+dialog img { display: block; max-width: 100%; max-height: 78vh; margin: 0 auto; object-fit: contain; }
+.picture-info { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; padding-top: 12px; }
+.picture-info h2 { margin: 0 0 4px; font-size: 16px; }
+.picture-info p { margin: 0; font-size: 13px; color: var(--muted); max-width: 70ch; }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 600px) { .topbar, main { padding-left: 16px; padding-right: 16px; } .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

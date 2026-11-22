@@ -1,0 +1,88 @@
+{
+  "title": "Deadlock Chat Mod",
+  "version": "0.2.4",
+  "cover": "cover-chat.png",
+  "thumbnail": "cover-chat.png",
+  "items": [
+    {
+      "id": "switchboard",
+      "title": "Default",
+      "group": "styles",
+      "file": "switchboard.jpg",
+      "caption": "Warm text on a dark panel, with coloured names.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "overwatch",
+      "title": "Overwatch 2 style",
+      "group": "styles",
+      "file": "overwatch.jpg",
+      "caption": "Light panel, open rows and cyan names.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "rivals",
+      "title": "Marvel Rivals style",
+      "group": "styles",
+      "file": "rivals.jpg",
+      "caption": "Dark square panel, bold text and yellow accents.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "league",
+      "title": "League of Legends style",
+      "group": "styles",
+      "file": "league.jpg",
+      "caption": "Small text, blue names and gold objective pings.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "native",
+      "title": "Deadlock",
+      "group": "styles",
+      "file": "native.jpg",
+      "caption": "The game’s own chat bubbles. The mod’s filters still apply.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "hidden",
+      "title": "Hidden",
+      "group": "controls",
+      "file": "hidden.jpg",
+      "caption": "Received messages are hidden. You can still open chat and type.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "timing",
+      "title": "Style options",
+      "group": "controls",
+      "file": "timing-controls.jpg",
+      "caption": "Chat Mod menu, Style tab: chat display, how long chat stays after you close it, font, size and opacity.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "messages",
+      "title": "Message filters",
+      "group": "controls",
+      "file": "message-controls.jpg",
+      "caption": "Messages tab: Text only, Text and pings or Everything, plus a switch for each kind of message.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "names",
+      "title": "Names and word matching",
+      "group": "controls",
+      "file": "name-controls.jpg",
+      "caption": "Names, channel labels and portraits, and the words used to sort pings.",
+      "kind": "In-game screenshot"
+    },
+    {
+      "id": "settings",
+      "title": "Where to find it",
+      "group": "controls",
+      "file": "settings-shortcut-arrow.png",
+      "caption": "Open Settings and click CHAT MOD at the bottom.",
+      "kind": "Screenshot with an arrow added"
+    }
+  ]
+}

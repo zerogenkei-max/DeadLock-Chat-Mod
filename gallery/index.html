@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Deadlock Chat Mod screenshots</title>
+  <link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Deadlock Chat Mod <span class="version" id="version"></span></h1>
+    <a class="button" href="/">Back to the customiser</a>
+  </header>
+  <main>
+    <h2 class="heading">Screenshots</h2>
+    <div class="filters" role="group" aria-label="Show">
+      <button type="button" class="filter" aria-pressed="true" data-filter="all">All</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="styles">Chat styles</button>
+      <button type="button" class="filter" aria-pressed="false" data-filter="controls">Options</button>
+    </div>
+    <section id="gallery" class="grid" aria-label="Screenshots"><p class="hint">Loading…</p></section>
+    <p class="hint footnote">All pictures are screenshots from Deadlock. The Settings picture has an arrow added. Click a picture to see it full size.</p>
+  </main>
+  <dialog id="lightbox" aria-labelledby="picture-title">
+    <img id="picture" alt="">
+    <div class="picture-info">
+      <div><h2 id="picture-title"></h2><p id="picture-caption"></p></div>
+      <div class="button-row"><button type="button" class="button" id="previous">Previous</button><button type="button" class="button" id="next">Next</button><button type="button" class="button" id="close">Close</button></div>
+    </div>
+  </dialog>
+</body>
+</html>
