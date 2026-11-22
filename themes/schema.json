@@ -1,0 +1,139 @@
+{
+  "defaults": {
+    "version": 1,
+    "preset": "switchboard",
+    "mode": "styled",
+    "nativeInput": false,
+    "font": "Radiance",
+    "fontSize": 18,
+    "bold": false,
+    "width": 480,
+    "height": 230,
+    "anchor": "left",
+    "side": 32,
+    "bottom": 400,
+    "spacing": 3,
+    "padding": 12,
+    "radius": 3,
+    "background": "#121a1c",
+    "backgroundOpacity": 48,
+    "textOpacity": 100,
+    "textColor": "#f4f0e6",
+    "teamColor": "#8bd9e8",
+    "enemyColor": "#ff9f8f",
+    "selfColor": "#a7dfbd",
+    "pingColor": "#e3c48c",
+    "accent": "#d8ad70",
+    "showText": true,
+    "showPings": true,
+    "showCallouts": true,
+    "showResponses": true,
+    "showObjectives": true,
+    "showSystem": true,
+    "showOwnMessages": true,
+    "showPortraits": false,
+    "showPortraitNames": true,
+    "showChannel": true,
+    "showNames": true,
+    "nameMode": "hero",
+    "textShadow": true,
+    "showOnLaunch": false,
+    "artwork": false,
+    "artworkOpacity": 24,
+    "fadeMode": "timed",
+    "fadeSeconds": 10,
+    "objectiveWords": "guardian,walker,patron,shrine,mid boss,midboss,urn,rejuvenator,watcher",
+    "calloutWords": "on my way,help,need,thanks,thank you,good job,nice,well played,careful,retreat,fall back,group up,push,defend,attack,missing,watch out,sorry",
+    "responseWords": "with you,acknowledged,understood,got it,agreed,on it,yes,no"
+  },
+  "numeric": {
+    "fontSize": [
+      12,
+      32
+    ],
+    "width": [
+      300,
+      820
+    ],
+    "height": [
+      100,
+      500
+    ],
+    "side": [
+      0,
+      900
+    ],
+    "bottom": [
+      0,
+      850
+    ],
+    "spacing": [
+      0,
+      14
+    ],
+    "padding": [
+      0,
+      30
+    ],
+    "radius": [
+      0,
+      18
+    ],
+    "backgroundOpacity": [
+      0,
+      100
+    ],
+    "textOpacity": [
+      30,
+      100
+    ],
+    "artworkOpacity": [
+      0,
+      100
+    ],
+    "fadeSeconds": [
+      0,
+      120
+    ]
+  },
+  "enums": {
+    "mode": [
+      "styled",
+      "native",
+      "hidden"
+    ],
+    "anchor": [
+      "left",
+      "center",
+      "right"
+    ],
+    "preset": [
+      "switchboard",
+      "overwatch",
+      "rivals",
+      "league",
+      "native",
+      "custom"
+    ],
+    "font": [
+      "Radiance",
+      "Arial",
+      "Tahoma",
+      "Verdana",
+      "Trebuchet MS",
+      "Noto Sans",
+      "Georgia",
+      "Consolas"
+    ],
+    "fadeMode": [
+      "native",
+      "timed",
+      "always"
+    ],
+    "nameMode": [
+      "hero",
+      "player",
+      "both"
+    ]
+  }
+}
