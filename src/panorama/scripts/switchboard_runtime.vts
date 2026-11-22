@@ -1,0 +1,642 @@
+/* Switchboard (Deadlock Chat Mod) — cosmetic presentation of the game's own chat panels. */
+(function () {
+    "use strict";
+    var M = SwitchboardModel, host = $.GetContextPanel(), root = host;
+    while (root.GetParent()) root = root.GetParent();
+    var boot = typeof SwitchboardBoot === "object" && SwitchboardBoot ? SwitchboardBoot : {};
+    // Artwork is offered only when the build compiled a texture in. Missing means no artwork.
+    var hasArtwork = boot.hasArtwork === true;
+    var token = typeof boot.token === "string" ? boot.token : "";
+    function usable(value) { var c = M.normalize(value); if (!hasArtwork) c.artwork = false; return c; }
+    var cfg; try { cfg = usable(boot.settings || M.defaults); } catch (e) { cfg = usable(M.defaults); }
+    var revision = 0, modal = null, currentTab = "Style", rebuilding = false, closed = false;
+    var sourceId = host.id + "/" + Date.now() + "/" + Math.random(), startupShown = false;
+    var imageRequest = null, saveTimer = null, pendingSave = 0, savedRevision = 0, saverSeen = false;
+    var styleStamp = "", stampCount = 0, backdropLast = "", lastOpen = 0, handlerId = null, ticking = false;
+    var wasExpanded = false, chatScanned = false;
+    var topBars = [], rosterPlayers = [], nextTopBarSearch = 0, lastTopBarSearch = 0, clockLabel = null, topPanel = null;
+    var responseSources = [], responseRows = [], categories = Object.create(null), categoryCount = 0, categoryWords = "";
+    var hud = null, roster = {}, nextRoster = 0, previousPreGame = null, lastMatchClock = null, inHideout = false;
+    var CHANNEL = "ClientUI_FireOutput", MARKER = "switchboard.chat.v1";
+    var isChat = host.paneltype === "CitadelChat";
+    var isSettings = host.paneltype === "PopupSettings";
+    var isPopup = host.paneltype === "PopupCustomLayout" || host.BHasClass("SBPopup");
+    // Long-lived contexts (chat HUD, dashboard footer) save preferences so a closing popup cannot lose them.
+    var isSaver = !isPopup && !isSettings;
+    var REBUILD = ["mode", "fadeMode", "showNames", "showPortraits", "artwork"];
+    function log(s) { $.Msg("[Switchboard] " + s); }
+    function valid(p) { return !!p && p.IsValid(); }
+    function find(p, id) { return valid(p) ? p.FindChildTraverse(id) : null; }
+    function set(p, key, value) { if (valid(p)) p.style[key] = value; }
+    // Panorama AddClass takes one class name, so split "A B" lists.
+    function addClasses(p, cls) { String(cls || "").split(" ").forEach(function (c) { if (c) p.AddClass(c); }); }
+    function text(parent, value, cls, id) {
+        var p = $.CreatePanel("Label", parent, id || ""); p.text = value;
+        addClasses(p, cls); return p;
+    }
+    // Player names are shown as plain text. Setting .text from script does not expand
+    // {s:...} templates (checked in game for 0.2.4), but a leading # could be read as a
+    // localisation token, so it gets a zero-width space in front.
+    function literal(label, value) {
+        value = String(value);
+        if (!valid(label) || label.GetAttributeString("sb_literal", "\u0000") === value) return;
+        label.SetAttributeString("sb_literal", value);
+        label.text = value.replace(/^#/, "\u200b#");
+    }
+    function button(parent, value, cls, fn, id) {
+        var p = $.CreatePanel("Button", parent, id || ""); addClasses(p, cls);
+        text(p, value); p.SetPanelEvent("onactivate", fn); return p;
+    }
+    function send(kind, rev) {
+        try { $.DispatchEvent(CHANNEL, JSON.stringify({ switchboard: MARKER, kind: kind, source: sourceId,
+            revision: rev === undefined ? revision : rev, settings: cfg, shown: startupShown,
+            saver: isSaver, popup: isPopup && !closed })); }
+        catch (e) { log("Settings channel unavailable: " + e); }
+    }
+    function unregister() {
+        if (handlerId === null) return;
+        try { if (typeof $.UnregisterForUnhandledEvent === "function") $.UnregisterForUnhandledEvent(CHANNEL, handlerId); } catch (e) {}
+        handlerId = null;
+    }
+    function receive(payload) {
+        if (!valid(host)) { unregister(); return; }
+        if (typeof payload !== "string" || payload.length > 16000 || payload.indexOf(MARKER) < 0) return;
+        var m; try { m = JSON.parse(payload); } catch (e) { return; }
+        if (!m || m.switchboard !== MARKER || m.source === sourceId) return;
+        if (m.saver === true) saverSeen = true;
+        if (m.kind === "hello") { send("state"); return; }
+        if (m.kind === "saved") {
+            if (typeof m.revision === "number" && isFinite(m.revision)) {
+                savedRevision = Math.max(savedRevision, m.revision);
+                if (pendingSave && m.revision >= pendingSave) cancelSave();
+            }
+            return;
+        }
+        if (m.kind !== "state" && m.kind !== "changed") return;
+        startupShown = startupShown || m.shown === true;
+        if (typeof m.revision !== "number" || !isFinite(m.revision) || m.revision < revision) return;
+        var next; try { next = usable(m.settings); } catch (e) { return; }
+        var same = JSON.stringify(next) === JSON.stringify(cfg);
+        if (!same || m.revision !== revision) {
+            cfg = next; revision = m.revision; styleStamp = "";
+            if (modal && !same) { updatePreview(); buildControls(); }
+        }
+        if (m.kind === "changed" && isSaver && m.revision > savedRevision) scheduleSave(isChat ? 0.3 : 0.4);
+    }
+    function cancelSave() {
+        if (saveTimer !== null) { try { $.CancelScheduled(saveTimer); } catch (e) {} }
+        saveTimer = null; pendingSave = 0;
+    }
+    function saveNow() {
+        var rev = pendingSave || revision; cancelSave();
+        // Only preferences are sent to the optional loopback helper. No chat text.
+        if (!token || !valid(host)) return false;
+        try {
+            if (!valid(imageRequest)) {
+                imageRequest = $.CreatePanel("Image", host, "SBPreferenceSink");
+                imageRequest.hittest = false; imageRequest.style.width = "1px";
+                imageRequest.style.height = "1px"; imageRequest.style.opacity = "0";
+            }
+            imageRequest.SetImage("http://127.0.0.1:18742/sync.png?token=" + encodeURIComponent(token) +
+                "&settings=" + encodeURIComponent(JSON.stringify(cfg)) + "&r=" + Date.now());
+        } catch (e) { log("Local preference save unavailable."); return false; }
+        savedRevision = Math.max(savedRevision, rev);
+        send("saved", rev);
+        return true;
+    }
+    function scheduleSave(delay) {
+        cancelSave(); pendingSave = revision;
+        var handle = $.Schedule(delay, function () { if (saveTimer === handle) { saveTimer = null; saveNow(); } });
+        saveTimer = handle;
+    }
+    function change(key, value) {
+        if (rebuilding) return false;
+        var next = M.clone(cfg); next[key] = value;
+        if (M.keptKeys.indexOf(key) < 0) next.preset = "custom";
+        try { next = M.normalize(next); } catch (e) { status(e.message); return false; }
+        if (!hasArtwork) next.artwork = false;
+        var probe = M.clone(next); probe.preset = cfg.preset;
+        if (JSON.stringify(probe) === JSON.stringify(cfg)) return false;
+        cfg = next; commit(REBUILD.indexOf(key) >= 0);
+        return true;
+    }
+    function commit(rebuild, message) {
+        revision = Math.max(Date.now(), revision + 1); styleStamp = "";
+        send("changed");
+        // The popup saves only when no long-lived context is there to do it.
+        if (!saverSeen) scheduleSave(0.5);
+        updatePreview();
+        if (rebuild) buildControls();
+        status(message || (token ? "Applied. Saved if the Windows customiser is running."
+            : "Applied until the game closes. Export a theme code to keep it."));
+    }
+    function status(value) { var p = find(modal, "SBStatus"); if (p) p.text = value; }
+    function close() {
+        if (!isPopup || closed) return;
+        if (saveTimer !== null) saveNow();
+        closed = true;
+        $.DispatchEvent("UIPopupButtonClicked", "");
+    }
+    function open() {
+        if (!isPopup) {
+            var now = Date.now();
+            if (now - lastOpen < 1500 && lastOpen) return;
+            lastOpen = now;
+            $.DispatchEvent("UIShowCustomLayoutPopup", "SwitchboardPopup", "s2r://panorama/layout/switchboard_panel.xml");
+            return;
+        }
+        if (modal) return;
+        modal = host;
+        find(modal, "SBClose").SetPanelEvent("onactivate", close);
+        find(modal, "SBDone").SetPanelEvent("onactivate", close);
+        find(modal, "SBBackdrop").SetPanelEvent("onactivate", close);
+        modal.SetPanelEvent("oncancel", close);
+        var version = find(modal, "SBVersion");
+        if (version) version.text = typeof boot.version === "string" ? boot.version.replace(/[^\w.\-]/g, "") : "";
+        var list = find(modal, "SBPresets");
+        Object.keys(M.presets).forEach(function (id) {
+            button(list, M.presets[id].name, "SBPreset", function () {
+                cfg = usable(M.preset(id, cfg)); commit(true);
+            }, "SBPreset_" + id);
+        });
+        var tabs = find(modal, "SBTabs");
+        ["Style", "Messages", "Theme"].forEach(function (name) {
+            button(tabs, name, "SBTab", function () { currentTab = name; buildControls(); }, "SBTab_" + name);
+        });
+        buildControls(); updatePreview(); modal.SetFocus();
+        status("Changes apply straight away.");
+        log("Settings opened in " + host.paneltype);
+    }
+    function row(parent, label, id) {
+        var p = $.CreatePanel("Panel", parent, id || ""); p.AddClass("SBRow");
+        text(p, label, "SBRowLabel");
+        var c = $.CreatePanel("Panel", p, ""); c.AddClass("SBRowControl"); return c;
+    }
+    function subhead(parent, value) { return text(parent, value, "SBSubhead"); }
+    function help(parent, value) { return text(parent, value, "SBHelp"); }
+    function numeric(parent, key, label, step, unit) {
+        var p = row(parent, label), value;
+        function show() { value.text = cfg[key] + unit; }
+        function move(direction) {
+            change(key, key === "fadeSeconds" ? M.stepFade(cfg[key], direction) : cfg[key] + direction * step); show();
+        }
+        button(p, "−", "SBStep", function () { move(-1); }, "SBDec_" + key);
+        value = text(p, "", "SBValue", "SBValue_" + key); show();
+        button(p, "+", "SBStep", function () { move(1); }, "SBInc_" + key);
+    }
+    function choice(parent, key, label, choices, labels) {
+        var p = row(parent, label);
+        if (choices.length > 3) {
+            var value;
+            var move = function (d) { change(key, choices[(choices.indexOf(cfg[key]) + d + choices.length) % choices.length]); value.text = String(cfg[key]); };
+            button(p, "<", "SBStep", function () { move(-1); }, "SBPrev_" + key);
+            value = text(p, String(cfg[key]), "SBValue SBWideValue", "SBValue_" + key);
+            button(p, ">", "SBStep", function () { move(1); }, "SBNext_" + key);
+            return;
+        }
+        var buttons = choices.map(function (c, i) {
+            return button(p, labels[i], "SBSegment", function () {
+                change(key, c);
+                buttons.forEach(function (b, j) { if (valid(b)) b.SetHasClass("SBSelected", choices[j] === cfg[key]); });
+            }, "SBChoice_" + key + "_" + c);
+        });
+        buttons.forEach(function (b, j) { b.SetHasClass("SBSelected", choices[j] === cfg[key]); });
+    }
+    function toggle(parent, key, label) {
+        var p = row(parent, label);
+        var b = button(p, cfg[key] ? "On" : "Off", "SBToggle", function () {
+            change(key, !cfg[key]);
+            if (valid(b)) { b.GetChild(0).text = cfg[key] ? "On" : "Off"; b.SetHasClass("SBToggleOn", cfg[key]); }
+        }, "SBToggle_" + key);
+        b.SetHasClass("SBToggleOn", cfg[key]);
+    }
+    function colour(parent, key, label) {
+        var p = row(parent, label), swatch = $.CreatePanel("Panel", p, "SBSwatch_" + key);
+        swatch.AddClass("SBSwatch"); swatch.style.backgroundColor = cfg[key];
+        var e = $.CreatePanel("TextEntry", p, "SBEntry_" + key);
+        e.AddClass("SBEntry"); e.text = cfg[key]; e.maxchars = 7;
+        function apply() {
+            var v = String(e.text).trim().toLowerCase();
+            if (v === cfg[key]) { e.text = cfg[key]; return; }
+            change(key, v); e.text = cfg[key]; swatch.style.backgroundColor = cfg[key];
+        }
+        e.SetPanelEvent("oninputsubmit", apply); e.SetPanelEvent("onblur", apply);
+    }
+    function words(parent, key, label) {
+        text(parent, label, "SBWordsLabel");
+        var e = $.CreatePanel("TextEntry", parent, "SBEntry_" + key);
+        e.AddClass("SBWords"); e.text = cfg[key]; e.maxchars = 400;
+        function apply() { if (String(e.text).trim() !== cfg[key]) change(key, e.text); }
+        e.SetPanelEvent("oninputsubmit", apply); e.SetPanelEvent("onblur", apply);
+    }
+    function buildControls() {
+        if (!valid(modal)) return;
+        rebuilding = true;
+        try {
+            var p = find(modal, "SBControls"); p.RemoveAndDeleteChildren();
+            ["Style", "Messages", "Theme"].forEach(function (t) { find(modal, "SBTab_" + t).SetHasClass("SBSelected", t === currentTab); });
+            if (currentTab === "Style") {
+                subhead(p, "Display");
+                choice(p, "mode", "Chat display", M.enums.mode, ["Styled", "Deadlock", "Hidden"]);
+                if (cfg.mode === "native") help(p, "Uses Deadlock's own chat look. Filters and the timer still apply.");
+                if (cfg.mode === "hidden") help(p, "Chat lines stay hidden until you open chat.");
+                choice(p, "fadeMode", "After closing chat", M.enums.fadeMode, ["Game timing", "Custom timer", "Always visible"]);
+                if (cfg.fadeMode === "timed") {
+                    numeric(p, "fadeSeconds", "Visible for", 1, " s");
+                    help(p, "Counts from when you close chat. New messages get their own timer.");
+                }
+                toggle(p, "showOnLaunch", "Open this panel when the game starts");
+                subhead(p, "Text");
+                choice(p, "font", "Font", M.enums.font);
+                numeric(p, "fontSize", "Font size", 1, "px");
+                toggle(p, "bold", "Bold");
+                numeric(p, "textOpacity", "Text opacity", 5, "%");
+                toggle(p, "textShadow", "Text shadow");
+                subhead(p, "Panel");
+                numeric(p, "backgroundOpacity", "Background opacity", 5, "%");
+                numeric(p, "width", "Width", 20, "px");
+                numeric(p, "height", "Height", 20, "px");
+                choice(p, "anchor", "Position", M.enums.anchor, ["Left", "Centre", "Right"]);
+                numeric(p, "side", "Side margin", 10, "px");
+                numeric(p, "bottom", "Bottom margin", 10, "px");
+                numeric(p, "spacing", "Line spacing", 1, "px");
+                numeric(p, "padding", "Padding", 1, "px");
+                numeric(p, "radius", "Corner radius", 1, "px");
+                toggle(p, "nativeInput", "Deadlock input bar");
+            } else if (currentTab === "Messages") {
+                subhead(p, "Show");
+                var selections = $.CreatePanel("Panel", p, ""); selections.AddClass("SBActionRow");
+                [["text", "Text only"], ["comms", "Text and pings"], ["all", "Everything"]].forEach(function (item) {
+                    button(selections, item[1], "SBAction", function () { cfg = M.messagePreset(item[0], cfg); commit(true); }, "SBShow_" + item[0]);
+                });
+                toggle(p, "showText", "Player messages");
+                toggle(p, "showPings", "General pings");
+                toggle(p, "showCallouts", "Callouts and chat wheel");
+                toggle(p, "showResponses", "\"I'm with you\" replies");
+                toggle(p, "showObjectives", "Objective pings");
+                toggle(p, "showSystem", "System messages");
+                toggle(p, "showOwnMessages", "My own messages");
+                subhead(p, "Names");
+                toggle(p, "showNames", "Show names");
+                if (cfg.showNames) choice(p, "nameMode", "Name format", M.enums.nameMode, ["Character", "Player", "Both"]);
+                toggle(p, "showChannel", "Channel labels");
+                toggle(p, "showPortraits", "Portraits");
+                if (cfg.showPortraits) toggle(p, "showPortraitNames", "Character name under portrait");
+                help(p, "Character names come from the scoreboard. The player name is used until one is known.");
+                subhead(p, "Word matching");
+                help(p, "Pings are sorted by the words they contain. Separate words with commas and add words in your game language.");
+                words(p, "objectiveWords", "Objective words");
+                words(p, "calloutWords", "Callout words");
+                words(p, "responseWords", "Reply words");
+            } else {
+                subhead(p, "Colours");
+                colour(p, "background", "Panel");
+                colour(p, "textColor", "Messages");
+                colour(p, "teamColor", "Team names");
+                colour(p, "selfColor", "Your name");
+                colour(p, "enemyColor", "Enemy names");
+                colour(p, "pingColor", "Pings");
+                colour(p, "accent", "Input bar");
+                subhead(p, "Artwork");
+                if (hasArtwork) {
+                    toggle(p, "artwork", "Background artwork");
+                    if (cfg.artwork) numeric(p, "artworkOpacity", "Artwork opacity", 5, "%");
+                } else help(p, "Background artwork can be added with the Windows customiser.");
+                subhead(p, "Theme code");
+                help(p, "Share this code or paste one here. Importing changes appearance and filters only.");
+                var code = $.CreatePanel("TextEntry", p, "SBThemeCode"); code.AddClass("SBCode"); code.multiline = true; code.maxchars = 12000; code.text = M.encode(cfg);
+                var actions = $.CreatePanel("Panel", p, ""); actions.AddClass("SBActionRow");
+                button(actions, "Import", "SBAction", function () {
+                    try { cfg = M.importTheme(code.text, cfg, hasArtwork); commit(true, "Theme imported."); } catch (e) { status(e.message); }
+                }, "SBImport");
+                button(actions, "Export", "SBAction", function () {
+                    code.text = M.encode(cfg); code.SetFocus(); code.SelectAll(); status("Code selected. Press Ctrl+C to copy it.");
+                }, "SBExport");
+            }
+        } finally { rebuilding = false; }
+    }
+    function updatePreview() {
+        if (!valid(modal)) return;
+        Object.keys(M.presets).forEach(function (id) { var b = find(modal, "SBPreset_" + id); if (b) b.SetHasClass("SBSelected", cfg.preset === id); });
+        var note = find(modal, "SBPresetNote");
+        if (note) note.text = M.presets[cfg.preset] ? M.presets[cfg.preset].note : "Custom settings.";
+        var preview = find(modal, "SBPreview");
+        preview.style.backgroundColor = M.rgba(cfg.background, cfg.mode === "styled" ? cfg.backgroundOpacity : 0);
+        preview.style.borderRadius = cfg.radius + "px";
+        find(modal, "SBPreviewTeam").visible = cfg.mode !== "hidden" && cfg.showText;
+        find(modal, "SBPreviewPing").visible = cfg.mode !== "hidden" && cfg.showCallouts;
+        find(modal, "SBPreviewObjective").visible = cfg.mode !== "hidden" && cfg.showObjectives;
+        [["SBPreviewTeam", cfg.teamColor], ["SBPreviewPing", cfg.textColor], ["SBPreviewObjective", cfg.pingColor]].forEach(function (item) {
+            var p = find(modal, item[0]); p.style.color = item[1]; p.style.fontFamily = cfg.font;
+            p.style.fontSize = Math.min(18, cfg.fontSize) + "px"; p.style.fontWeight = cfg.bold ? "bold" : "normal";
+        });
+    }
+    function restoreInline(p) {
+        if (!valid(p)) return;
+        var saved = p.GetAttributeString("sb_inline", "");
+        if (!saved) return;
+        try { var values = JSON.parse(saved); Object.keys(values).forEach(function (k) { p.style[k] = values[k]; }); } catch (e) {}
+        p.SetAttributeString("sb_inline", "");
+    }
+    function styles(p, values) {
+        if (!valid(p)) return;
+        if (!p.GetAttributeString("sb_inline", "")) {
+            var before = {}; Object.keys(values).forEach(function (k) { before[k] = p.style[k] || ""; });
+            p.SetAttributeString("sb_inline", JSON.stringify(before));
+        }
+        Object.keys(values).forEach(function (k) { p.style[k] = values[k]; });
+    }
+    function allLabels(p, out) {
+        if (!valid(p)) return out;
+        if (p.paneltype === "Label") out.push(p);
+        var children = p.Children(); for (var i = 0; i < children.length; i++) allLabels(children[i], out);
+        return out;
+    }
+    function visibleByTimer(row, expanded, closing, now, bodyText) {
+        var activity = Number(row.GetAttributeString("sb_activity", "0"));
+        var nativeExpired = row.BHasClass("Expired"), repeated = row.BHasClass("PingRepeated");
+        var seen = row.GetAttributeString("sb_seen", "") === "1";
+        var previous = row.GetAttributeString("sb_message", "");
+        // Native snippets start Expired. Their live state can come and go between polls,
+        // so recognise new rows or newly populated/reused rows even if already expired.
+        // Do not resurrect expired history present when the script first scans chat.
+        var newActivity = (!seen && chatScanned) || (seen && previous !== bodyText && bodyText.trim() !== "") ||
+            (seen && repeated && row.GetAttributeString("sb_repeated", "") !== "1");
+        if (expanded || closing || newActivity || (!nativeExpired && (!activity || previous !== bodyText ||
+            row.GetAttributeString("sb_native_expired", "") === "1" ||
+            (repeated && row.GetAttributeString("sb_repeated", "") !== "1")))) activity = now;
+        row.SetAttributeString("sb_seen", "1");
+        row.SetAttributeString("sb_activity", String(activity));
+        row.SetAttributeString("sb_message", bodyText);
+        row.SetAttributeString("sb_native_expired", nativeExpired ? "1" : "0");
+        row.SetAttributeString("sb_repeated", repeated ? "1" : "0");
+        var visible = expanded || cfg.fadeMode === "always" || (cfg.fadeMode === "native" ? !nativeExpired : activity > 0 && now - activity < cfg.fadeSeconds * 1000);
+        row.SetHasClass("SBTimedOut", !visible && cfg.fadeMode === "timed");
+        return visible;
+    }
+    function hudAncestor() {
+        for (var p = host; p; p = p.GetParent()) if (p.paneltype === "CitadelHud") return p;
+        return null;
+    }
+    function locateTopBars() {
+        var now = Date.now();
+        if (now < nextTopBarSearch) return topBars.filter(valid);
+        // Found panels are reused until one goes away; a full roster is re-checked only now and then.
+        var healthy = topBars.length > 0 && valid(clockLabel) && topBars.every(valid) && rosterPlayers.every(valid) && rosterPlayers.length >= 12;
+        if (healthy && now < lastTopBarSearch + 15000) return topBars;
+        nextTopBarSearch = now + 2000; lastTopBarSearch = now;
+        if (!valid(hud)) hud = hudAncestor();
+        // Inspect the existing UI tree only. No player/entity or network API is used.
+        var queue = [valid(hud) ? hud : root], visited = 0, found = [], players = [];
+        while (visited < queue.length && visited < 6000) {
+            var p = queue[visited++];
+            if (!valid(p) || p === host) continue;
+            if (p.paneltype === "CitadelHud" && !valid(hud)) hud = p;
+            if (p.paneltype === "CitadelHudTopBarPlayer") { players.push(p); continue; }
+            if (p.paneltype === "CitadelHudTopBarChat") { found.push(p); continue; }
+            var children = p.Children();
+            for (var i = 0; i < children.length; i++) queue.push(children[i]);
+        }
+        topBars = found; rosterPlayers = players;
+        clockLabel = find(hud, "GameTime"); topPanel = find(hud, "TopBar");
+        return topBars;
+    }
+    function clearMatchPings() {
+        var messages = find(host, "ChatMessages");
+        if (valid(messages)) messages.Children().forEach(function (row) {
+            var body = find(row, "MessageContents");
+            if (row.BHasClass("SBResponse") || valid(body) && body.BHasClass("Ping")) row.AddClass("SBStale");
+        });
+        topBars.filter(valid).forEach(function (bar) {
+            var messages = find(bar, "Messages");
+            if (valid(messages)) messages.Children().forEach(function (p) { p.SetAttributeString("sb_response_stale", "1"); });
+        });
+        responseSources = []; roster = {}; nextRoster = 0; wasExpanded = false;
+    }
+    function observeMatch() {
+        if (!isChat) return;
+        locateTopBars();
+        var hiding = valid(hud) && hud.BHasClass("InHideout");
+        var preGame = valid(hud) && (hud.BHasClass("GameStatePreGame") || hud.BHasClass("GameStatePreGameWait"));
+        var clock = null;
+        var match = valid(clockLabel) ? String(clockLabel.text).trim().match(/^(-?)(\d+):(\d\d)$/) : null;
+        if (match) clock = (Number(match[2]) * 60 + Number(match[3])) * (match[1] ? -1 : 1);
+        var roundClock = valid(hud) && (hud.BHasClass("gStreetBrawl") || hud.BHasClass("gamemode_streetbrawl")) || valid(topPanel) && topPanel.BHasClass("gStreetBrawl");
+        // Entering the hideout clears old match pings once; pings sent in the hideout still show.
+        if (hiding && !inHideout || preGame && previousPreGame === false || !roundClock && clock !== null && lastMatchClock !== null && clock < lastMatchClock - 2) clearMatchPings();
+        inHideout = hiding; previousPreGame = preGame;
+        lastMatchClock = hiding ? null : clock;
+        if (hiding) { roster = {}; return; }
+        if (Date.now() < nextRoster) return;
+        nextRoster = Date.now() + 1000;
+        // Names come from the native public roster labels, never entity data.
+        roster = {};
+        rosterPlayers.filter(valid).forEach(function (player) {
+            var name = "", hero = "";
+            allLabels(find(player, "PlayerNameNWContainer"), []).forEach(function (label) {
+                if (label.BHasClass("PlayerName")) name = String(label.text).trim();
+                if (label.BHasClass("HeroName")) hero = String(label.text).trim();
+            });
+            if (name && hero && hero.indexOf("{") < 0 && hero.charAt(0) !== "#") roster[name] = roster[name] === undefined || roster[name] === hero ? hero : "";
+        });
+    }
+    function nativeName(source) {
+        var labels = allLabels(source, []);
+        for (var i = 0; i < labels.length; i++) if (labels[i].BHasClass("SenderName") && !labels[i].BHasClass("SBSenderName")) return labels[i];
+        return null;
+    }
+    function applyNames(row, source) {
+        var native = nativeName(source), hero = "";
+        if (valid(native)) {
+            // The game's label keeps its {s:sender_name} binding and is only read, never rewritten.
+            var player = String(native.text);
+            if (native.GetAttributeString("sb_player_name", "\u0000") !== player) {
+                native.SetAttributeString("sb_player_name", player);
+                native.SetAttributeString("sb_hero", "");
+            }
+            // A resolved character is frozen for the row so old lines keep the character they were sent as.
+            hero = native.GetAttributeString("sb_hero", "");
+            if (!hero && roster[player]) { hero = roster[player]; native.SetAttributeString("sb_hero", hero); }
+            var value = M.displayName(player, hero, cfg.nameMode), parent = native.GetParent();
+            var shown = find(parent, "SBSenderName"), replace = value !== player;
+            if (replace && !valid(shown)) {
+                shown = $.CreatePanel("Label", parent, "SBSenderName"); shown.AddClass("SenderName"); shown.AddClass("SBSenderName");
+                if (typeof parent.MoveChildAfter === "function") parent.MoveChildAfter(shown, native);
+            }
+            if (valid(shown)) { if (replace) literal(shown, value); shown.SetHasClass("SBNameUnused", !replace); }
+            native.SetHasClass("SBNativeName", replace);
+        }
+        var sender = find(row, "SenderImage"), caption = find(sender, "SBPortraitCaption");
+        if (valid(sender) && hero && cfg.mode === "styled" && cfg.showPortraits && cfg.showPortraitNames) {
+            if (!valid(caption)) { caption = $.CreatePanel("Label", sender, "SBPortraitCaption"); caption.AddClass("SBPortraitCaption"); }
+            literal(caption, hero); caption.visible = true;
+        } else if (valid(caption)) caption.visible = false;
+    }
+    function isSystemRow(row) {
+        // chat.xml loads the ChatMessageSender_LocalClient snippet (class SenderLocalClient) into
+        // #SenderImage for lines the game posts itself.
+        var image = find(row, "SenderImage");
+        if (!valid(image)) return false;
+        if (image.BHasClass("SenderLocalClient")) return true;
+        var children = image.Children();
+        for (var i = 0; i < children.length; i++) if (children[i].BHasClass("SenderLocalClient")) return true;
+        return false;
+    }
+    function categorise(ping, bodyText) {
+        var words = cfg.responseWords + "\n" + cfg.objectiveWords + "\n" + cfg.calloutWords;
+        if (words !== categoryWords || categoryCount > 500) { categoryWords = words; categories = Object.create(null); categoryCount = 0; }
+        var k = (ping ? "p:" : "t:") + bodyText;
+        if (!categories[k]) { categories[k] = M.category(ping, bodyText, false, cfg); categoryCount++; }
+        return categories[k];
+    }
+    function mirrorResponses() {
+        if (!isChat) return;
+        var bars = locateTopBars(), messages = find(host, "ChatMessages");
+        if (!valid(messages)) return;
+        responseSources = responseSources.filter(function (item) { return valid(item.panel); });
+        bars.forEach(function (bar) {
+        var source = find(bar, "Messages"); if (!valid(source)) return;
+        source.Children().forEach(function (nativeRow) {
+            if (!nativeRow.BHasClass("ChatMessage") || nativeRow.BHasClass("Expired") || nativeRow.visible === false || nativeRow.GetAttributeString("sb_response_stale", "") === "1") return;
+            var heroes = find(nativeRow, "ResponseHeroes");
+            if (!valid(heroes) || !nativeRow.BHasClass("HasResponse")) return;
+            var responders = heroes.Children().filter(function (p) { return p.visible !== false && p.BHasClass("ResponseHero"); });
+            if (!responders.length) return;
+            var seen = null;
+            responseSources.forEach(function (item) { if (item.panel === nativeRow) seen = item; });
+            if (!seen) { seen = { panel: nativeRow, heroes: [] }; responseSources.push(seen); }
+            var added = responders.filter(function (p) { return seen.heroes.indexOf(p) < 0; });
+            seen.heroes = responders;
+            if (!added.length) return;
+            var original = find(nativeRow, "MessageText");
+            var wording = original ? String(original.text).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 240) : "";
+            var row = $.CreatePanel("Panel", messages, ""); row.AddClass("ChatMessage"); row.AddClass("SBResponse"); row.AddClass("ShowSource");
+            var body = $.CreatePanel("Panel", row, ""); body.AddClass("MessageBody");
+            var sender = $.CreatePanel("Panel", body, "MessageSource");
+            // No localisation token for these words exists in the game files we have, so the English stays short.
+            text(sender, "[Reply]", "ChannelName");
+            var content = $.CreatePanel("Panel", body, "MessageContents"); content.AddClass("Ping");
+            literal($.CreatePanel("Label", content, ""), "I'm with you" + (added.length > 1 ? " ×" + added.length : "") + (wording ? " · " + wording : ""));
+            row.SetAttributeString("sb_activity", String(Date.now()));
+            responseRows = responseRows.filter(valid); responseRows.push(row);
+            while (responseRows.length > 40) { var oldest = responseRows.shift(); if (valid(oldest)) oldest.DeleteAsync(0); }
+            // The engine owns native history. Our bounded summaries expire independently.
+            (function (addedRow) { $.Schedule(10, function () { if (valid(addedRow)) addedRow.AddClass("Expired"); }); })(row);
+        });
+        });
+        if (responseSources.length > 80) responseSources = responseSources.slice(-80);
+    }
+    function applyChat() {
+        if (!isChat || !valid(host)) return;
+        var styled = cfg.mode === "styled";
+        if (!styleStamp) {
+            styleStamp = Date.now() + "." + (++stampCount);
+            host.SetHasClass("SBStyled", styled);
+            host.SetHasClass("SBHidden", cfg.mode === "hidden");
+            host.SetHasClass("SBCustomFade", cfg.fadeMode !== "native");
+            host.SetHasClass("SBNativeInput", cfg.nativeInput);
+            host.SetHasClass("SBPortraits", cfg.showPortraits);
+            host.SetHasClass("SBPortraitNames", cfg.showPortraitNames);
+            host.SetHasClass("SBNoChannels", !cfg.showChannel);
+            host.SetHasClass("SBNoNames", !cfg.showNames);
+            if (styled) {
+                var parent = host.GetParent(), screenW = 1920, screenH = 1080;
+                if (valid(parent) && parent.actualuiscale_x > 0 && parent.actualuiscale_y > 0) {
+                    screenW = parent.actuallayoutwidth / parent.actualuiscale_x || screenW;
+                    screenH = parent.actuallayoutheight / parent.actualuiscale_y || screenH;
+                }
+                var width = Math.min(cfg.width, screenW - 32), height = Math.min(cfg.height, screenH - 100);
+                var side = Math.max(0, Math.min(cfg.side, screenW - width - 16));
+                var bottom = Math.max(0, Math.min(cfg.bottom, screenH - height - 70));
+                styles(host, { width: width + "px", horizontalAlign: cfg.anchor, verticalAlign: "bottom",
+                    marginLeft: cfg.anchor === "left" ? side + "px" : "0px",
+                    marginRight: cfg.anchor === "right" ? side + "px" : "0px", marginBottom: bottom + "px" });
+                styles(find(host, "ChatLinesArea"), { height: height + "px", backgroundColor: M.rgba(cfg.background, cfg.backgroundOpacity),
+                    padding: cfg.padding + "px", borderRadius: cfg.radius + "px" });
+                if (!cfg.nativeInput) styles(find(host, "ChatControls"), { borderTopColor: cfg.accent });
+                else restoreInline(find(host, "ChatControls"));
+            } else {
+                restoreInline(host); restoreInline(find(host, "ChatLinesArea")); restoreInline(find(host, "ChatControls"));
+            }
+            var lines = find(host, "ChatLinesArea"), art = find(host, "SBChatArtwork");
+            // Never point at the artwork texture unless the build compiled one in.
+            if (styled && cfg.artwork && hasArtwork && valid(lines)) {
+                if (!valid(art)) { art = $.CreatePanel("Image", lines, "SBChatArtwork"); art.AddClass("SBArtwork"); art.hittest = false; art.SetImage("s2r://panorama/images/switchboard/custom_background.vtex"); art.style.transform = "scaleY(-1)"; }
+                art.style.opacity = (cfg.artworkOpacity / 100).toFixed(2); art.visible = true;
+            } else if (valid(art)) art.visible = false;
+        }
+        var messages = find(host, "ChatMessages"); if (!messages) return;
+        var rows = messages.Children(), expanded = host.BHasClass("ChatExpanded"), active = expanded;
+        var closing = wasExpanded && !expanded, now = Date.now();
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i]; if (!row.BHasClass("ChatMessage")) continue;
+            var content = find(row, "MessageContents"), source = find(row, "MessageSource");
+            applyNames(row, source);
+            var labels = allLabels(content, []), senderLabels = allLabels(source, []), bodyText = "";
+            for (var j = 0; j < labels.length; j++) bodyText += labels[j].text + " ";
+            var ping = valid(content) && content.BHasClass("Ping");
+            var kind = row.BHasClass("SBResponse") ? "response" : isSystemRow(row) ? "system" : categorise(ping, bodyText);
+            var allowed = !row.BHasClass("SBStale") && M.allows(kind, cfg) && (cfg.showOwnMessages || !row.BHasClass("IsSelf"));
+            row.SetHasClass("SBFiltered", !allowed);
+            var visible = visibleByTimer(row, expanded, closing, now, bodyText);
+            if (allowed && visible && cfg.mode !== "hidden") active = true;
+            var side = row.BHasClass("IsEnemy") ? "e" : row.BHasClass("IsSelf") ? "s" : "t";
+            // Reused or late-filled rows get a new key and are styled again.
+            var rowKey = styleStamp + "|" + kind + "|" + side + "|" + labels.length + "|" + senderLabels.length + "|" + bodyText;
+            if (row.GetAttributeString("sb_style", "") === rowKey) continue;
+            row.SetAttributeString("sb_style", rowKey);
+            var nameColor = side === "e" ? cfg.enemyColor : side === "s" ? cfg.selfColor : cfg.teamColor;
+            var messageColor = kind === "text" || kind === "system" ? cfg.textColor : cfg.pingColor;
+            if (styled) {
+                // Opacity belongs on labels so the game's row expiration remains intact.
+                styles(row, { marginTop: cfg.spacing + "px" });
+                labels.concat(senderLabels).forEach(function (p) {
+                    styles(p, { fontFamily: cfg.font, fontSize: cfg.fontSize + "px", fontWeight: cfg.bold ? "bold" : "normal",
+                        color: senderLabels.indexOf(p) >= 0 ? nameColor : messageColor,
+                        fontStyle: "normal", opacity: (cfg.textOpacity / 100).toFixed(2),
+                        textShadow: cfg.textShadow ? "0px 1px 3px #000000d0" : "none" });
+                });
+            } else {
+                restoreInline(row); labels.concat(senderLabels).forEach(restoreInline);
+            }
+        }
+        wasExpanded = expanded; chatScanned = true;
+        var backdropKey = styleStamp + "/" + active;
+        if (styled && backdropKey !== backdropLast) {
+            set(find(host, "ChatLinesArea"), "backgroundColor", M.rgba(cfg.background, active ? cfg.backgroundOpacity : 0));
+            var artwork = find(host, "SBChatArtwork"); if (valid(artwork)) artwork.visible = cfg.artwork && hasArtwork && active;
+        }
+        backdropLast = backdropKey;
+    }
+    function mountEntry() {
+        var parent = isSettings ? find(host, "SwitchboardFooterActions") : find(host, "CenterRightCommandPanel");
+        if (!valid(parent) || find(parent, "SwitchboardSettingsEntry")) return;
+        button(parent, "CHAT MOD", "SBSettingsEntry", open, "SwitchboardSettingsEntry");
+    }
+    // A newer copy of this script on the same panel takes over; older tick loops stop.
+    host.SetAttributeString("sb_runtime", sourceId);
+    try { handlerId = $.RegisterForUnhandledEvent(CHANNEL, receive); } catch (e) { log("Settings sync unavailable: " + e); }
+    if (handlerId === undefined) handlerId = null;
+    globalThis.SwitchboardOpen = open;
+    function tick() {
+        if (!valid(host) || host.GetAttributeString("sb_runtime", "") !== sourceId) { unregister(); ticking = false; return; }
+        try { observeMatch(); mirrorResponses(); applyChat(); if (!isChat && !isPopup) mountEntry(); }
+        catch (e) { if (!host.GetAttributeString("sb_error", "")) { log("UI error: " + e.stack); host.SetAttributeString("sb_error", "1"); } }
+        $.Schedule(isChat ? 0.2 : 1.0, tick);
+    }
+    $.Schedule(0.1, function () {
+        send("hello"); if (isPopup) open();
+        if (!ticking) { ticking = true; tick(); }
+        log("Ready: " + host.paneltype + "#" + host.id);
+    });
+    // Wait in wall-clock time: map activation dismisses popups shown during loading.
+    if (isChat) {
+        var startupTime = Date.now();
+        var startup = function () {
+            if (!valid(host) || startupShown || !cfg.showOnLaunch) return;
+            if (Date.now() - startupTime < 8000) { $.Schedule(0.5, startup); return; }
+            startupShown = true; send("state"); open();
+        };
+        $.Schedule(0.5, startup);
+    }
+})();

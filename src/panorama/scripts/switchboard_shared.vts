@@ -1,0 +1,187 @@
+/* Switchboard — shared theme model. Works in Panorama and the local editor. */
+(function (global) {
+    "use strict";
+    var defaults = {
+        version: 1, preset: "switchboard", mode: "styled", nativeInput: false,
+        font: "Radiance", fontSize: 18, bold: false, width: 480, height: 230,
+        anchor: "left", side: 32, bottom: 400, spacing: 3, padding: 12, radius: 3,
+        background: "#121a1c", backgroundOpacity: 48, textOpacity: 100,
+        textColor: "#f4f0e6", teamColor: "#8bd9e8", enemyColor: "#ff9f8f",
+        selfColor: "#a7dfbd", pingColor: "#e3c48c", accent: "#d8ad70",
+        showText: true, showPings: true, showCallouts: true, showResponses: true,
+        showObjectives: true, showSystem: true, showOwnMessages: true,
+        showPortraits: false, showPortraitNames: true, showChannel: true, showNames: true, nameMode: "hero",
+        textShadow: true, showOnLaunch: false, artwork: false, artworkOpacity: 24,
+        fadeMode: "timed", fadeSeconds: 10,
+        objectiveWords: "guardian,walker,patron,shrine,mid boss,midboss,urn,rejuvenator,watcher",
+        calloutWords: "on my way,help,need,thanks,thank you,good job,nice,well played,careful,retreat,fall back,group up,push,defend,attack,missing,watch out,sorry",
+        responseWords: "with you,acknowledged,understood,got it,agreed,on it,yes,no"
+    };
+    var presets = {
+        switchboard: { name: "Default", note: "Plain lines on a dark panel with coloured names.", values: {} },
+        overwatch: { name: "Overwatch 2 style", note: "Light panel, cyan team names, thin input bar.", values: {
+            font: "Arial", fontSize: 18, width: 520, height: 218, background: "#111725",
+            backgroundOpacity: 16, radius: 0, spacing: 3, padding: 10,
+            textColor: "#f4f7fb", teamColor: "#6cdbff", selfColor: "#6cdbff",
+            enemyColor: "#ff9c74", pingColor: "#b6edff", accent: "#ed9e37"
+        } },
+        rivals: { name: "Marvel Rivals style", note: "Dark square panel, bold text, yellow pings.", values: {
+            font: "Arial", fontSize: 18, width: 500, height: 246, bold: true,
+            background: "#151923", backgroundOpacity: 68, radius: 0, spacing: 4, padding: 14,
+            textColor: "#f7f7f5", teamColor: "#69dbff", selfColor: "#69dbff",
+            enemyColor: "#ff8f8a", pingColor: "#f5d34e", accent: "#f5d34e"
+        } },
+        league: { name: "League of Legends style", note: "Small text, blue names, gold pings.", values: {
+            font: "Tahoma", fontSize: 16, width: 510, height: 206,
+            background: "#09141a", backgroundOpacity: 24, radius: 0, spacing: 1, padding: 8,
+            textColor: "#e6e8e3", teamColor: "#69b5e7", selfColor: "#69b5e7",
+            enemyColor: "#ee7970", pingColor: "#d9b761", accent: "#bd9b56"
+        } },
+        native: { name: "Deadlock", note: "The game's own chat bubbles. Filters still apply.", values: { mode: "native", nativeInput: true } }
+    };
+    var numeric = { fontSize: [12, 32], width: [300, 820], height: [100, 500], side: [0, 900],
+        bottom: [0, 850], spacing: [0, 14], padding: [0, 30], radius: [0, 18],
+        backgroundOpacity: [0, 100], textOpacity: [30, 100], artworkOpacity: [0, 100], fadeSeconds: [0, 120] };
+    var enums = { mode: ["styled", "native", "hidden"], anchor: ["left", "center", "right"],
+        preset: ["switchboard", "overwatch", "rivals", "league", "native", "custom"],
+        font: ["Radiance", "Arial", "Tahoma", "Verdana", "Trebuchet MS", "Noto Sans", "Georgia", "Consolas"],
+        fadeMode: ["native", "timed", "always"], nameMode: ["hero", "player", "both"] };
+    // Preferences a preset never changes. Changing one of these does not mark the preset custom.
+    var keptKeys = ["showText", "showPings", "showCallouts", "showResponses", "showObjectives", "showSystem",
+        "showOwnMessages", "showOnLaunch", "showPortraits", "showPortraitNames", "showChannel", "showNames",
+        "nameMode", "fadeMode", "fadeSeconds", "anchor", "side", "bottom", "objectiveWords", "calloutWords",
+        "responseWords", "artwork", "artworkOpacity"];
+    // A theme code may change appearance and message filters only.
+    var filterKeys = ["showText", "showPings", "showCallouts", "showResponses", "showObjectives", "showSystem", "showOwnMessages"];
+    var themeKeys = ["preset", "mode", "nativeInput", "font", "fontSize", "bold", "width", "height", "anchor", "side",
+        "bottom", "spacing", "padding", "radius", "background", "backgroundOpacity", "textOpacity", "textColor",
+        "teamColor", "enemyColor", "selfColor", "pingColor", "accent", "textShadow", "showPortraits",
+        "showPortraitNames", "showChannel", "showNames", "nameMode", "fadeMode", "fadeSeconds"].concat(filterKeys);
+    var wordKeys = ["objectiveWords", "calloutWords", "responseWords"];
+    function clone(o) { return JSON.parse(JSON.stringify(o)); }
+    function normalize(input) {
+        if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("A theme must be a settings object.");
+        if (input.version !== undefined && input.version !== 1) throw new Error("This theme uses an unsupported format version.");
+        var out = clone(defaults);
+        Object.keys(defaults).forEach(function (key) {
+            var v = input[key];
+            if (v === undefined || key === "version") return;
+            if (numeric[key]) {
+                if (typeof v !== "number" || !isFinite(v)) throw new Error(key + " must be a number.");
+                out[key] = Math.round(Math.max(numeric[key][0], Math.min(numeric[key][1], v)));
+            } else if (enums[key]) {
+                if (enums[key].indexOf(v) < 0) throw new Error("Unrecognised " + key + ".");
+                out[key] = v;
+            } else if (typeof defaults[key] === "boolean") {
+                if (typeof v !== "boolean") throw new Error(key + " must be true or false.");
+                out[key] = v;
+            } else if (wordKeys.indexOf(key) >= 0) {
+                if (typeof v !== "string" || v.length > 400 || /[<>\r\n]/.test(v)) throw new Error("Matching words must be a short comma-separated list.");
+                out[key] = v.trim();
+            } else {
+                if (typeof v !== "string" || !/^#[0-9a-fA-F]{6}$/.test(v)) throw new Error(key + " must be a six-digit hex colour.");
+                out[key] = v.toLowerCase();
+            }
+        });
+        return out;
+    }
+    function preset(id, current) {
+        if (!presets[id]) throw new Error("Unknown preset.");
+        var next = clone(defaults), keep = current || defaults;
+        keptKeys.forEach(function (k) { if (keep[k] !== undefined) next[k] = keep[k]; });
+        Object.keys(presets[id].values).forEach(function (k) { next[k] = presets[id].values[k]; });
+        next.preset = id;
+        return normalize(next);
+    }
+    // Scripts written without spaces between words (CJK, Thai and similar).
+    var unspaced = /[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿가-힯豈-﫿ｦ-ﾟ]/;
+    function clean(value) { return String(value || "").toLowerCase().replace(/<[^>]*>/g, " ").replace(/[^\w\u0080-￿]+/g, " ").trim(); }
+    function compileWords(words) {
+        return String(words || "").split(",").map(clean).filter(Boolean).map(function (word) {
+            // Whole-word matching needs spaces and Latin letters; otherwise match anywhere in the text.
+            return { word: word, padded: " " + word + " ", substring: unspaced.test(word) || !/[a-z0-9]/.test(word) };
+        });
+    }
+    var compiled = { key: null, lists: null };
+    function matchers(config) {
+        var key = config.responseWords + "\n" + config.objectiveWords + "\n" + config.calloutWords;
+        if (compiled.key !== key) compiled = { key: key, lists: { response: compileWords(config.responseWords),
+            objective: compileWords(config.objectiveWords), callout: compileWords(config.calloutWords) } };
+        return compiled.lists;
+    }
+    function matches(plain, list) {
+        var padded = " " + plain + " ";
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].substring ? plain.indexOf(list[i].word) >= 0 : padded.indexOf(list[i].padded) >= 0) return true;
+        }
+        return false;
+    }
+    function category(isPing, text, isSystem, config) {
+        if (isSystem) return "system";
+        if (!isPing) return "text";
+        var plain = clean(text), lists = matchers(config);
+        if (matches(plain, lists.response)) return "response";
+        if (matches(plain, lists.objective)) return "objective";
+        if (matches(plain, lists.callout)) return "callout";
+        return "ping";
+    }
+    function allows(kind, config) {
+        return { text: config.showText, ping: config.showPings, callout: config.showCallouts,
+            response: config.showResponses, objective: config.showObjectives, system: config.showSystem }[kind] !== false;
+    }
+    function displayName(player, hero, mode) {
+        if (!hero || mode === "player") return player;
+        return mode === "both" && hero !== player ? hero + " (" + player + ")" : hero;
+    }
+    function rgba(hex, opacity) {
+        return "rgba(" + parseInt(hex.slice(1, 3), 16) + "," + parseInt(hex.slice(3, 5), 16) + "," + parseInt(hex.slice(5, 7), 16) + "," + (opacity / 100).toFixed(2) + ")";
+    }
+    function messagePreset(id, current) {
+        if (["text", "comms", "all"].indexOf(id) < 0) throw new Error("Unknown message selection.");
+        var next = normalize(current);
+        next.showText = true;
+        ["showPings", "showCallouts", "showResponses", "showObjectives"].forEach(function (key) { next[key] = id !== "text"; });
+        next.showSystem = id === "all";
+        return next;
+    }
+    // Visible-for timer: 1 s steps up to 10 s, then 5 s steps up to 120 s.
+    function stepFade(value, direction) {
+        var v = Math.max(0, Math.min(120, Math.round(Number(value) || 0)));
+        if (direction > 0) return v < 10 ? v + 1 : Math.min(120, (Math.floor(v / 5) + 1) * 5);
+        if (v <= 10) return Math.max(0, v - 1);
+        return Math.max(10, (Math.ceil(v / 5) - 1) * 5);
+    }
+    function parseTheme(text) {
+        if (typeof text !== "string" || text.length > 12000) throw new Error("Theme text is too large.");
+        var value = text.trim();
+        if (value.indexOf("switchboard:") === 0) {
+            try { value = decodeURIComponent(value.slice(12)); }
+            catch (e) { throw new Error("This theme code is damaged. Copy it again and paste the whole code."); }
+        }
+        var raw;
+        try { raw = JSON.parse(value); }
+        catch (e) { throw new Error("This is not a theme code. Paste a code copied from Export."); }
+        normalize(raw);
+        return raw;
+    }
+    function decode(text) { return normalize(parseTheme(text)); }
+    // Merge a theme onto the current settings. Only appearance and filter keys are taken;
+    // artwork is taken only when artwork is available, and never switched on without it.
+    function importTheme(text, current, artworkAvailable) {
+        var raw = parseTheme(text), theme = normalize(raw), next = normalize(current || defaults);
+        themeKeys.forEach(function (k) { if (raw[k] !== undefined) next[k] = theme[k]; });
+        if (raw.preset === undefined) next.preset = "custom";
+        if (artworkAvailable) {
+            if (raw.artwork !== undefined) next.artwork = theme.artwork;
+            if (raw.artworkOpacity !== undefined) next.artworkOpacity = theme.artworkOpacity;
+        } else next.artwork = false;
+        return normalize(next);
+    }
+    var api = { defaults: defaults, presets: presets, numeric: numeric, enums: enums, keptKeys: keptKeys,
+        themeKeys: themeKeys, normalize: normalize, preset: preset, category: category, allows: allows,
+        rgba: rgba, decode: decode, importTheme: importTheme, clone: clone, messagePreset: messagePreset,
+        displayName: displayName, stepFade: stepFade, compileWords: compileWords,
+        encode: function (c) { return "switchboard:" + encodeURIComponent(JSON.stringify(normalize(c))); } };
+    global.SwitchboardModel = api;
+    if (typeof module !== "undefined" && module.exports) module.exports = api;
+})(typeof globalThis !== "undefined" ? globalThis : this);
