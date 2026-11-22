@@ -1,0 +1,45 @@
+<root>
+    <styles>
+        <include src="s2r://panorama/styles/citadel_base_styles.vcss" />
+        <include src="s2r://panorama/styles/popups/popups_shared.vcss" />
+        <include src="s2r://panorama/styles/switchboard.vcss" />
+    </styles>
+    <scripts>
+        <include src="s2r://panorama/scripts/switchboard_shared.vts" />
+        <include src="s2r://panorama/scripts/switchboard_boot.vts" />
+        <include src="s2r://panorama/scripts/switchboard_runtime.vts" />
+    </scripts>
+    <Panel class="PopupPanel SBPopup Hidden" popupbackground="none" oncancel="UIPopupButtonClicked()">
+      <Panel class="SBOverlay" hittest="true">
+        <Panel id="SBBackdrop" class="SBBackdrop" />
+        <Panel class="SBWindow">
+            <Panel class="SBHeader">
+                <Label class="SBTitle" text="Chat Mod" />
+                <Label id="SBVersion" class="SBVersion" text="" />
+                <Button id="SBClose" class="SBClose"><Label text="Close" /></Button>
+            </Panel>
+            <Panel class="SBColumns">
+                <Panel class="SBLeft">
+                    <Label class="SBSection" text="Presets" />
+                    <Panel id="SBPresets" class="SBPresetList" />
+                    <Label id="SBPresetNote" class="SBPresetNote" text="" />
+                    <Label class="SBSection SBPreviewTitle" text="Preview" />
+                    <Panel id="SBPreview" class="SBPreview">
+                        <Label id="SBPreviewTeam" text="[Team] Ivy: let's take the next fight together" />
+                        <Label id="SBPreviewPing" text="Dynamo: On my way!" />
+                        <Label id="SBPreviewObjective" text="Seven: Attack the Walker" />
+                    </Panel>
+                </Panel>
+                <Panel class="SBRight">
+                    <Panel id="SBTabs" class="SBTabs" />
+                    <Panel id="SBControls" class="SBControls" />
+                </Panel>
+            </Panel>
+            <Panel class="SBFooter">
+                <Label id="SBStatus" class="SBStatus" text="" />
+                <Button id="SBDone" class="SBPrimary"><Label text="Done" /></Button>
+            </Panel>
+        </Panel>
+      </Panel>
+    </Panel>
+</root>
