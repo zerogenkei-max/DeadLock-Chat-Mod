@@ -1,0 +1,117 @@
+/* Chat Mod settings panel and in-chat rules. Panorama CSS, not browser CSS. */
+CitadelChat.SBCustomFade:not(.ChatExpanded) .ChatMessage,
+CitadelChat.SBCustomFade:not(.ChatExpanded) .ChatMessage.Expired { opacity: 1; }
+CitadelChat.SBCustomFade:not(.ChatExpanded) .ChatMessage.SBTimedOut { opacity: 0; }
+
+/* Settings window. Palette: #15191a / #1c2224 / #232a2c, text #e9e4d8 / #9ea7a3, brass #c8a46a. */
+.PopupPanel.SBPopup { width: 100%; height: 100%; padding: 0px; background-color: transparent; border: 0px solid transparent; box-shadow: none; flow-children: none; }
+.SBOverlay { width: 100%; height: 100%; z-index: 9000; }
+.SBBackdrop { width: 100%; height: 100%; background-color: #000000b8; }
+.SBWindow { width: 1080px; height: 780px; horizontal-align: center; vertical-align: center; flow-children: down; background-color: #15191a; border: 1px solid #ffffff14; border-radius: 2px; box-shadow: #00000099 0px 8px 32px 0px; }
+.SBHeader { width: 100%; height: 56px; padding: 0px 24px; flow-children: right; background-color: #1c2224; border-bottom: 1px solid #ffffff14; }
+.SBTitle { font-family: Reaver; font-size: 22px; color: #e9e4d8; vertical-align: center; }
+.SBVersion { font-family: Radiance; font-size: 13px; color: #9ea7a3; vertical-align: center; margin-left: 10px; margin-top: 3px; }
+.SBClose { horizontal-align: right; vertical-align: center; height: 32px; padding: 0px 16px; background-color: #232a2c; border: 1px solid #ffffff14; border-radius: 2px; }
+.SBClose Label { font-family: Radiance; font-size: 13px; font-weight: bold; color: #e9e4d8; vertical-align: center; text-transform: uppercase; letter-spacing: 1px; }
+.SBClose:hover { border-color: #ffffff4d; }
+.SBColumns { width: 100%; height: fill-parent-flow(1); flow-children: right; }
+.SBLeft { width: 320px; height: 100%; padding: 24px; flow-children: down; background-color: #1c2224; border-right: 1px solid #ffffff14; }
+.SBSection { width: 100%; margin-bottom: 8px; font-family: Radiance; font-size: 12px; font-weight: bold; color: #9ea7a3; text-transform: uppercase; letter-spacing: 1px; }
+.SBPresetList { width: 100%; flow-children: down; }
+.SBPreset { width: 100%; height: 36px; padding: 0px 12px; border-left: 2px solid #00000000; }
+.SBPreset Label { font-family: Radiance; font-size: 15px; color: #e9e4d8; vertical-align: center; }
+.SBPreset:hover { background-color: #232a2c; }
+.SBPreset.SBSelected { background-color: #232a2c; border-left: 2px solid #c8a46a; }
+.SBPresetNote { width: 100%; margin-top: 8px; font-family: Radiance; font-size: 13px; color: #9ea7a3; white-space: normal; }
+.SBPreviewTitle { margin-top: 24px; }
+.SBPreview { width: 100%; padding: 10px 12px; flow-children: down; border: 1px solid #ffffff14; }
+.SBPreview Label { width: 100%; margin-bottom: 4px; white-space: normal; font-size: 15px; text-shadow: 0px 1px 2px #000000c0; }
+.SBRight { width: fill-parent-flow(1); height: 100%; flow-children: down; }
+.SBTabs { width: 100%; height: 48px; padding: 0px 24px; flow-children: right; border-bottom: 1px solid #ffffff14; }
+.SBTab { height: 100%; padding: 0px 14px; margin-right: 4px; border-bottom: 2px solid #00000000; }
+.SBTab Label { font-family: Radiance; font-size: 14px; font-weight: bold; color: #9ea7a3; vertical-align: center; text-transform: uppercase; letter-spacing: 1px; }
+.SBTab:hover Label { color: #e9e4d8; }
+.SBTab.SBSelected { border-bottom: 2px solid #c8a46a; }
+.SBTab.SBSelected Label { color: #e9e4d8; }
+.SBControls { width: 100%; height: fill-parent-flow(1); padding: 0px 24px 16px 24px; flow-children: down; overflow: squish scroll; }
+.SBSubhead { width: 100%; margin-top: 20px; margin-bottom: 4px; font-family: Radiance; font-size: 12px; font-weight: bold; color: #9ea7a3; text-transform: uppercase; letter-spacing: 1px; }
+.SBRow { width: 100%; height: 44px; flow-children: right; border-bottom: 1px solid #ffffff14; }
+.SBRowLabel { width: fill-parent-flow(1); vertical-align: center; font-family: Radiance; font-size: 15px; color: #e9e4d8; }
+.SBRowControl { height: 100%; flow-children: right; }
+.SBStep { width: 28px; height: 28px; vertical-align: center; background-color: #232a2c; border: 1px solid #ffffff14; border-radius: 2px; }
+.SBStep Label { horizontal-align: center; vertical-align: center; font-family: Radiance; font-size: 16px; color: #e9e4d8; }
+.SBStep:hover { border-color: #ffffff4d; }
+.SBValue { width: 72px; vertical-align: center; text-align: center; font-family: Radiance; font-size: 15px; color: #e9e4d8; }
+.SBWideValue { width: 140px; }
+.SBSegment { height: 28px; padding: 0px 12px; margin-left: 4px; vertical-align: center; background-color: #232a2c; border: 1px solid #ffffff14; border-radius: 2px; }
+.SBSegment Label { vertical-align: center; font-family: Radiance; font-size: 14px; color: #9ea7a3; }
+.SBSegment:hover { border-color: #ffffff4d; }
+.SBSegment.SBSelected { border-color: #c8a46a; }
+.SBSegment.SBSelected Label { color: #e9e4d8; }
+.SBToggle { width: 64px; height: 28px; vertical-align: center; background-color: #232a2c; border: 1px solid #ffffff14; border-radius: 2px; }
+.SBToggle Label { horizontal-align: center; vertical-align: center; font-family: Radiance; font-size: 14px; color: #9ea7a3; }
+.SBToggle:hover { border-color: #ffffff4d; }
+.SBToggle.SBToggleOn { border-color: #c8a46a; }
+.SBToggle.SBToggleOn Label { color: #e9e4d8; }
+.SBSwatch { width: 20px; height: 20px; margin-right: 8px; vertical-align: center; border: 1px solid #ffffff26; border-radius: 2px; }
+.SBEntry { width: 110px; height: 28px; padding: 3px 8px; vertical-align: center; font-family: Radiance; font-size: 14px; color: #e9e4d8; background-color: #0f1213; border: 1px solid #ffffff26; border-radius: 2px; }
+.SBEntry:focus { border-color: #c8a46a; }
+.SBWordsLabel { width: 100%; margin-top: 10px; font-family: Radiance; font-size: 15px; color: #e9e4d8; }
+.SBWords { width: 100%; height: 32px; margin-top: 6px; padding: 5px 8px; font-family: Radiance; font-size: 14px; color: #e9e4d8; background-color: #0f1213; border: 1px solid #ffffff26; border-radius: 2px; }
+.SBWords:focus { border-color: #c8a46a; }
+.SBHelp { width: 100%; margin: 8px 0px; font-family: Radiance; font-size: 13px; color: #9ea7a3; white-space: normal; }
+.SBCode { width: 100%; height: 96px; margin-top: 4px; padding: 8px; font-family: Radiance; font-size: 13px; color: #e9e4d8; background-color: #0f1213; border: 1px solid #ffffff26; border-radius: 2px; white-space: normal; }
+.SBCode:focus { border-color: #c8a46a; }
+.SBActionRow { width: 100%; margin: 8px 0px; flow-children: right; }
+.SBAction { height: 30px; padding: 0px 14px; margin-right: 8px; background-color: #232a2c; border: 1px solid #ffffff26; border-radius: 2px; }
+.SBAction Label { vertical-align: center; font-family: Radiance; font-size: 14px; color: #e9e4d8; }
+.SBAction:hover { border-color: #ffffff59; }
+.SBFooter { width: 100%; height: 60px; padding: 0px 24px; flow-children: right; background-color: #1c2224; border-top: 1px solid #ffffff14; }
+.SBStatus { width: fill-parent-flow(1); margin-right: 16px; vertical-align: center; font-family: Radiance; font-size: 13px; color: #9ea7a3; }
+.SBPrimary { height: 36px; padding: 0px 28px; vertical-align: center; background-color: #c8a46a; border-radius: 2px; }
+.SBPrimary Label { vertical-align: center; font-family: Radiance; font-size: 14px; font-weight: bold; color: #15191a; text-transform: uppercase; letter-spacing: 1px; }
+.SBPrimary:hover { background-color: #d6b57f; }
+
+/* Entry button added to Deadlock's Settings footer and dashboard. */
+.SBSettingsEntry { padding: 8px 18px; margin-left: 18px; vertical-align: center; background-color: #1c2224; border: 1px solid #ffffff26; border-radius: 2px; }
+.SBSettingsEntry Label { font-family: Radiance; font-size: 15px; font-weight: bold; color: #e9e4d8; letter-spacing: 1px; }
+.SBSettingsEntry:hover { border-color: #c8a46a; }
+
+/* These rules are opt-in; removing SBStyled restores the original stylesheet. */
+CitadelChat.SBStyled { flow-children: down; }
+.SBStyled #ChatLinesArea { opacity-mask: none; }
+.SBStyled .ChatMessage { width: 100%; flow-children: right; horizontal-align: left; }
+.SBStyled .ChatMessage.IsSelf { flow-children: right; horizontal-align: left; }
+.SBStyled .ChatMessage .MessageBody { flow-children: right; width: fill-parent-flow(1); }
+.SBStyled .ChatMessage .MessageBody #MessageSource { flow-children: right; padding-left: 0px; visibility: visible; }
+.SBStyled .ChatMessage .MessageBody #MessageContents { background-color: transparent; margin: 0px; border-radius: 0px; padding: 0px; horizontal-align: left; width: fill-parent-flow(1); }
+.SBStyled .ChatMessage .MessageBody #MessageContents.Text { background-color: transparent; border-radius: 0px; padding: 0px; }
+.SBStyled .ChatMessage .MessageBody #MessageContents.Ping { background-color: transparent; border-radius: 0px; padding: 0px; }
+.SBStyled .ChatMessage.ShowSource { margin-top: 0px; }
+.SBStyled .ChatMessage.ShowSource #MessageContents { margin: 0px; }
+.SBStyled .ChatMessage.IsSelf.ShowSource #MessageContents { margin: 0px; }
+.SBStyled .ChatMessage #SenderImage { visibility: collapse; width: 24px; height: 24px; }
+.SBStyled.SBPortraits .ChatMessage #SenderImage { visibility: visible; opacity: 1; margin-right: 6px; vertical-align: top; }
+.SBPortraitCaption { visibility: collapse; }
+.SBStyled.SBPortraits.SBPortraitNames .ChatMessage #SenderImage { width: 58px; height: 58px; flow-children: down; }
+.SBStyled.SBPortraits.SBPortraitNames #SenderImage > Panel { width: 30px; height: 30px; horizontal-align: center; }
+.SBStyled.SBPortraits.SBPortraitNames .ChatMessage #SenderImage CitadelHeroImage,
+.SBStyled.SBPortraits.SBPortraitNames .ChatMessage #SenderImage CitadelAvatarImage { width: 30px; height: 30px; horizontal-align: center; }
+.SBStyled.SBPortraits.SBPortraitNames .SBPortraitCaption { visibility: visible; width: 58px; height: 20px; text-align: center; text-overflow: shrink; font-size: 12px; color: #d9e3d5; margin-top: 3px; }
+.SBStyled .ChatMessage .MessageBody #MessageContents.Ping #TargetHeroImage { width: 18px; height: 18px; }
+.SBStyled .ChatMessage .MessageBody #MessageSource .SenderName { margin-left: 0px; margin-right: 0px; }
+.SBColon { visibility: collapse; }
+.SBStyled .SBColon { visibility: visible; margin-right: 6px; }
+.SBStyled .ChatMessage .MessageBody #MessageSource .ChannelName { margin-right: 5px; }
+.SBStyled .ChatMessage.PingRepeated #MessageContents { animation-name: none; }
+.SBStyled.SBNoChannels .ChannelName { visibility: collapse; }
+.SBStyled.SBNoNames .SenderName { visibility: collapse; }
+.SBStyled.SBNoNames .SBColon { visibility: collapse; }
+.SBFiltered { visibility: collapse; }
+.SBNativeName { visibility: collapse; }
+.SBNameUnused { visibility: collapse; }
+.SBStale { visibility: collapse; }
+/* Hidden mode keeps lines out of view until chat is opened. */
+CitadelChat.SBHidden:not(.ChatExpanded) #ChatLinesArea { visibility: collapse; }
+.SBArtwork { width: 100%; height: 100%; z-index: -1; }
+.SBStyled:not(.SBNativeInput) #ChatControls { margin-top: 6px; border-top: 2px solid #d8ad70; background-color: #101819de; padding: 3px; }
